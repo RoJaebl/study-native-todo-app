@@ -9,7 +9,11 @@ npm-debug.*
 *.mobileprovision
 *.orig.*
 web-build/
+<<<<<<< Updated upstream
 package-lock.json
+=======
+yarn.lock
+>>>>>>> Stashed changes
 
 # macOS
 .DS_Store
