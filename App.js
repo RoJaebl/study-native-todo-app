@@ -14,30 +14,43 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Fontisto } from "@expo/vector-icons";
 
 const STORAGE_KEY = "@toDos";
+const MODE_KEY = "@mode";
 
 export default function App() {
   const [working, setWorking] = useState(true);
   const [text, setText] = useState("");
-  const [toDos, SetToDos] = useState({});
+  const [toDos, setToDos] = useState({});
   useEffect(() => {
     loadToDos();
+    loadMode();
   }, []);
-  const travel = () => setWorking(false);
-  const work = () => setWorking(true);
+  const setMode = async (mode) => {
+    setWorking(mode);
+    await saveMode(mode);
+  };
+  const saveMode = async (mode) => {
+    await AsyncStorage.setItem(MODE_KEY, JSON.stringify({ mode }));
+  };
+  const loadMode = async () => {
+    const load = await AsyncStorage.getItem(MODE_KEY);
+    if (load) {
+      setWorking(JSON.parse(load).mode);
+    }
+  };
   const onChangeText = (payload) => setText(payload);
   const saveToDos = async (toSave) =>
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   const loadToDos = async () => {
     const load = await AsyncStorage.getItem(STORAGE_KEY);
     if (load) {
-      SetToDos(JSON.parse(load));
+      setToDos(JSON.parse(load));
     }
   };
   const addToDo = async () => {
     if (text == "") return;
     else {
       const newToDos = { ...toDos, [Date.now()]: { text, working } };
-      SetToDos(newToDos);
+      setToDos(newToDos);
       await saveToDos(newToDos);
       setText("");
     }
@@ -50,25 +63,31 @@ export default function App() {
         onPress: () => {
           const newToDos = { ...toDos };
           delete newToDos[key];
-          SetToDos(newToDos);
+          setToDos(newToDos);
           saveToDos(newToDos);
         },
       },
     ]);
   };
 
+  /**
+   * @TODO
+   * [] 현재있는 모드 기억하여 앱을 재시작하여 기역한 모드로 이동
+   * [] checkBox를 만들어서 todo를 완료했는지 확인하는 기능 추가
+   * [] todo를 수정할 수 있는 기능 추가
+   */
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={work}>
+        <TouchableOpacity onPress={() => setMode(true)}>
           <Text
             style={{ ...styles.btnText, color: working ? "white" : theme.grey }}
           >
             Work
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={travel}>
+        <TouchableOpacity onPress={() => setMode(false)}>
           <Text
             style={{
               ...styles.btnText,
