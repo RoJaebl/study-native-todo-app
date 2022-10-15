@@ -12,6 +12,7 @@ import {
 import { theme } from "./color";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Fontisto } from "@expo/vector-icons";
+import BouncyCheckbox from "react-native-bouncy-checkbox";
 
 const STORAGE_KEY = "@toDos";
 const MODE_KEY = "@mode";
@@ -49,7 +50,10 @@ export default function App() {
   const addToDo = async () => {
     if (text == "") return;
     else {
-      const newToDos = { ...toDos, [Date.now()]: { text, working } };
+      const newToDos = {
+        ...toDos,
+        [Date.now()]: { text, isChecked: false, working },
+      };
       setToDos(newToDos);
       await saveToDos(newToDos);
       setText("");
@@ -69,11 +73,17 @@ export default function App() {
       },
     ]);
   };
+  const checkedToDO = async (key) => {
+    toDos[key].isChecked = toDos[key].isChecked ? false : true;
+    const newToDos = { ...toDos };
+    setToDos(newToDos);
+    saveToDos(newToDos);
+  };
 
   /**
    * @TODO
-   * [] 현재있는 모드 기억하여 앱을 재시작하여 기역한 모드로 이동
-   * [] checkBox를 만들어서 todo를 완료했는지 확인하는 기능 추가
+   * [x] 현재있는 모드 기억하여 앱을 재시작하여 기역한 모드로 이동
+   * [x] checkBox를 만들어서 todo를 완료했는지 확인하는 기능 추가
    * [] todo를 수정할 수 있는 기능 추가
    */
   return (
@@ -110,7 +120,24 @@ export default function App() {
         {Object.keys(toDos).map((key) =>
           toDos[key].working == working ? (
             <View style={styles.toDo} key={key}>
-              <Text style={styles.toDoText}>{toDos[key].text}</Text>
+              <View style={styles.toDoSpan}>
+                <BouncyCheckbox
+                  size={25}
+                  fillColor="springgreen"
+                  unfillColor={theme.toDoBg}
+                  isChecked={toDos[key].isChecked}
+                  onPress={() => {
+                    checkedToDO(key);
+                  }}
+                />
+                <Text
+                  style={
+                    toDos[key].isChecked ? styles.textChecked : styles.toDoText
+                  }
+                >
+                  {toDos[key].text}
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => deleteToDo(key)}>
                 <Fontisto name="trash" size={18} color={theme.grey} />
               </TouchableOpacity>
@@ -155,9 +182,25 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  toDoSpan: {
+    backgroundColor: theme.toDoBg,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  textChecked: {
+    fontSize: 16,
+    color: "white",
+    fontWeight: "500",
+    fontStyle: "italic",
+    textDecorationLine: "line-through",
+    opacity: 0.5,
+  },
   toDoText: {
     fontSize: 16,
     color: "white",
     fontWeight: "500",
+    fontStyle: "normal",
+    textDecorationLine: "none",
+    opacity: 1,
   },
 });
