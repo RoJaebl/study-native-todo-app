@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -11,33 +11,52 @@ import {
 } from "react-native";
 import { theme } from "./color";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Fontisto } from "@expo/vector-icons";
+import { Fontisto, Entypo } from "@expo/vector-icons";
+import BouncyCheckbox from "react-native-bouncy-checkbox";
 
 const STORAGE_KEY = "@toDos";
+const MODE_KEY = "@mode";
 
 export default function App() {
   const [working, setWorking] = useState(true);
   const [text, setText] = useState("");
-  const [toDos, SetToDos] = useState({});
+  const [editText, setEditText] = useState({});
+  const [toDos, setToDos] = useState({});
+  const refTextInput = useRef(null);
   useEffect(() => {
     loadToDos();
+    loadMode();
   }, []);
-  const travel = () => setWorking(false);
-  const work = () => setWorking(true);
+  const setMode = async (mode) => {
+    setWorking(mode);
+    await saveMode(mode);
+  };
+  const saveMode = async (mode) => {
+    await AsyncStorage.setItem(MODE_KEY, JSON.stringify({ mode }));
+  };
+  const loadMode = async () => {
+    const load = await AsyncStorage.getItem(MODE_KEY);
+    if (load) {
+      setWorking(JSON.parse(load).mode);
+    }
+  };
   const onChangeText = (payload) => setText(payload);
   const saveToDos = async (toSave) =>
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   const loadToDos = async () => {
     const load = await AsyncStorage.getItem(STORAGE_KEY);
     if (load) {
-      SetToDos(JSON.parse(load));
+      setToDos(JSON.parse(load));
     }
   };
   const addToDo = async () => {
     if (text == "") return;
     else {
-      const newToDos = { ...toDos, [Date.now()]: { text, working } };
-      SetToDos(newToDos);
+      const newToDos = {
+        ...toDos,
+        [Date.now()]: { text, isChecked: false, working },
+      };
+      setToDos(newToDos);
       await saveToDos(newToDos);
       setText("");
     }
@@ -50,25 +69,39 @@ export default function App() {
         onPress: () => {
           const newToDos = { ...toDos };
           delete newToDos[key];
-          SetToDos(newToDos);
+          setToDos(newToDos);
           saveToDos(newToDos);
         },
       },
     ]);
+  };
+  const CheckToDO = async (key) => {
+    toDos[key].isChecked = toDos[key].isChecked ? false : true;
+    const newToDos = { ...toDos };
+    setToDos(newToDos);
+    saveToDos(newToDos);
+  };
+  const editToDo = (payload) =>
+    setEditText({ key: editText.key, text: payload });
+
+  const modifyToDO = async (key) => {
+    toDos[key].text = editText.text;
+    const newToDos = { ...toDos };
+    await saveToDos(newToDos);
   };
 
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
       <View style={styles.header}>
-        <TouchableOpacity onPress={work}>
+        <TouchableOpacity onPress={() => setMode(true)}>
           <Text
             style={{ ...styles.btnText, color: working ? "white" : theme.grey }}
           >
             Work
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={travel}>
+        <TouchableOpacity onPress={() => setMode(false)}>
           <Text
             style={{
               ...styles.btnText,
@@ -91,10 +124,48 @@ export default function App() {
         {Object.keys(toDos).map((key) =>
           toDos[key].working == working ? (
             <View style={styles.toDo} key={key}>
-              <Text style={styles.toDoText}>{toDos[key].text}</Text>
-              <TouchableOpacity onPress={() => deleteToDo(key)}>
-                <Fontisto name="trash" size={18} color={theme.grey} />
-              </TouchableOpacity>
+              <View style={styles.toDoSpan}>
+                <BouncyCheckbox
+                  size={25}
+                  fillColor="springgreen"
+                  unfillColor={theme.toDoBg}
+                  isChecked={toDos[key].isChecked}
+                  onPress={() => {
+                    CheckToDO(key);
+                  }}
+                />
+                <TextInput
+                  onFocus={() => setEditText({ key, text: toDos[key].text })}
+                  onBlur={() => {
+                    setEditText({ key: null, text: "" });
+                    refTextInput.current.setSelection[0] = () => ({
+                      start: 0,
+                      end: 0,
+                    });
+                    refTextInput.current.setSelection(0, 0);
+                  }}
+                  onChangeText={editToDo}
+                  onSubmitEditing={() => modifyToDO(key)}
+                  returnKeyType="done"
+                  style={{
+                    ...(toDos[key].isChecked
+                      ? styles.textChecked
+                      : styles.toDoText),
+                    width: "75%",
+                  }}
+                  editable={toDos[key].isChecked ? false : true}
+                  value={key == editText.key ? editText.text : toDos[key].text}
+                  ref={refTextInput}
+                ></TextInput>
+              </View>
+              <View style={styles.iconBox}>
+                <TouchableOpacity
+                  style={{ marginHorizontal: 5 }}
+                  onPress={() => deleteToDo(key)}
+                >
+                  <Fontisto name="trash" size={24} color={theme.grey} />
+                </TouchableOpacity>
+              </View>
             </View>
           ) : null
         )}
@@ -136,9 +207,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  toDoSpan: {
+    backgroundColor: theme.toDoBg,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  textChecked: {
+    fontSize: 16,
+    color: "white",
+    fontWeight: "500",
+    fontStyle: "italic",
+    textDecorationLine: "line-through",
+    opacity: 0.5,
+  },
   toDoText: {
     fontSize: 16,
     color: "white",
     fontWeight: "500",
+    fontStyle: "normal",
+    textDecorationLine: "none",
+    opacity: 1,
+  },
+  iconBox: {
+    flexDirection: "row",
   },
 });
