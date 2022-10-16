@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { theme } from "./color";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Fontisto } from "@expo/vector-icons";
+import { Fontisto, Entypo } from "@expo/vector-icons";
 import BouncyCheckbox from "react-native-bouncy-checkbox";
 
 const STORAGE_KEY = "@toDos";
@@ -20,7 +20,9 @@ const MODE_KEY = "@mode";
 export default function App() {
   const [working, setWorking] = useState(true);
   const [text, setText] = useState("");
+  const [editText, setEditText] = useState({});
   const [toDos, setToDos] = useState({});
+  const refTextInput = useRef(null);
   useEffect(() => {
     loadToDos();
     loadMode();
@@ -73,19 +75,21 @@ export default function App() {
       },
     ]);
   };
-  const checkedToDO = async (key) => {
+  const CheckToDO = async (key) => {
     toDos[key].isChecked = toDos[key].isChecked ? false : true;
     const newToDos = { ...toDos };
     setToDos(newToDos);
     saveToDos(newToDos);
   };
+  const editToDo = (payload) =>
+    setEditText({ key: editText.key, text: payload });
 
-  /**
-   * @TODO
-   * [x] 현재있는 모드 기억하여 앱을 재시작하여 기역한 모드로 이동
-   * [x] checkBox를 만들어서 todo를 완료했는지 확인하는 기능 추가
-   * [] todo를 수정할 수 있는 기능 추가
-   */
+  const modifyToDO = async (key) => {
+    toDos[key].text = editText.text;
+    const newToDos = { ...toDos };
+    await saveToDos(newToDos);
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
@@ -127,20 +131,41 @@ export default function App() {
                   unfillColor={theme.toDoBg}
                   isChecked={toDos[key].isChecked}
                   onPress={() => {
-                    checkedToDO(key);
+                    CheckToDO(key);
                   }}
                 />
-                <Text
-                  style={
-                    toDos[key].isChecked ? styles.textChecked : styles.toDoText
-                  }
-                >
-                  {toDos[key].text}
-                </Text>
+                <TextInput
+                  onFocus={() => setEditText({ key, text: toDos[key].text })}
+                  onBlur={() => {
+                    setEditText({ key: null, text: "" });
+                    refTextInput.current.setSelection[0] = () => ({
+                      start: 0,
+                      end: 0,
+                    });
+                    refTextInput.current.setSelection(0, 0);
+                  }}
+                  onChangeText={editToDo}
+                  onSubmitEditing={() => modifyToDO(key)}
+                  returnKeyType="done"
+                  style={{
+                    ...(toDos[key].isChecked
+                      ? styles.textChecked
+                      : styles.toDoText),
+                    width: "75%",
+                  }}
+                  editable={toDos[key].isChecked ? false : true}
+                  value={key == editText.key ? editText.text : toDos[key].text}
+                  ref={refTextInput}
+                ></TextInput>
               </View>
-              <TouchableOpacity onPress={() => deleteToDo(key)}>
-                <Fontisto name="trash" size={18} color={theme.grey} />
-              </TouchableOpacity>
+              <View style={styles.iconBox}>
+                <TouchableOpacity
+                  style={{ marginHorizontal: 5 }}
+                  onPress={() => deleteToDo(key)}
+                >
+                  <Fontisto name="trash" size={24} color={theme.grey} />
+                </TouchableOpacity>
+              </View>
             </View>
           ) : null
         )}
@@ -202,5 +227,8 @@ const styles = StyleSheet.create({
     fontStyle: "normal",
     textDecorationLine: "none",
     opacity: 1,
+  },
+  iconBox: {
+    flexDirection: "row",
   },
 });
