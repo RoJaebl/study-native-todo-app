@@ -7,7 +7,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "tunnel": "expo start --tunnel"
+    "tunnel": "expo start --tunnel",
+    "deploy": "gh-pages -d web-build",
+    "predeploy": "expo export:web"
   },
   "dependencies": {
     "@expo/webpack-config": "0.17.0",
@@ -15,6 +17,7 @@
     "expo": "^46.0.15",
     "expo-status-bar": "^1.4.0",
     "expo-updates": "~0.14.6",
+    "gh-pages": "^4.0.0",
     "react": "18.0.0",
     "react-dom": "18.0.0",
     "react-native": "0.69.6",
