@@ -1,6 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import {
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -62,18 +63,28 @@ export default function App() {
     }
   };
   const deleteToDo = async (key) => {
-    Alert.alert("Delete To Do?", "Are you sure?", [
-      { text: "Cancel" },
-      {
-        text: "I'm Sure",
-        onPress: () => {
-          const newToDos = { ...toDos };
-          delete newToDos[key];
-          setToDos(newToDos);
-          saveToDos(newToDos);
+    if (Platform.OS == "web") {
+      const alert = confirm("Do you want to delete this To Do?");
+      if (alert) {
+        const newToDos = { ...toDos };
+        delete newToDos[key];
+        setToDos(newToDos);
+        saveToDos(newToDos);
+      }
+    } else {
+      Alert.alert("Delete To Do?", "Are you sure?", [
+        { text: "Cancel" },
+        {
+          text: "I'm Sure",
+          onPress: () => {
+            const newToDos = { ...toDos };
+            delete newToDos[key];
+            setToDos(newToDos);
+            saveToDos(newToDos);
+          },
         },
-      },
-    ]);
+      ]);
+    }
   };
   const CheckToDO = async (key) => {
     toDos[key].isChecked = toDos[key].isChecked ? false : true;
@@ -89,7 +100,6 @@ export default function App() {
     const newToDos = { ...toDos };
     await saveToDos(newToDos);
   };
-
   return (
     <View style={styles.container}>
       <StatusBar style="auto" />
